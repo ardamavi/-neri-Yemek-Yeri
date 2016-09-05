@@ -46,6 +46,11 @@ def data_ekle(table, eklenecek):
 def yeni_kullanici():
     tum_kullanicilar = verileri_al("kullanicilar", "*")
     inpt = input("Kullanıcı Adı: ")
+    tmp_kullanicilar = []
+    for bir_veri in tum_kullanicilar:
+        if bir_veri[0] not in tmp_kullanicilar:
+            tmp_kullanicilar.append(bir_veri[0])
+    tum_kullanicilar = deepcopy(tmp_kullanicilar)
     if inpt not in tum_kullanicilar:
         data_ekle("kullanicilar", inpt)
         print("Kullanıcı Eklendi !")
@@ -85,7 +90,7 @@ def puanla(kullanici, tum_kullanicilar):
             print("- "+bir_kullanici)
         print("Çıkış: 0")
     yer = input("Puanlama Yapacağınız Yer: ")
-    if yer == "0":
+    if yer == "0" or yer == "":
         print("Puanlama menüsünden çıkış yapıldı.")
         return "cik"
     if yer not in tum_kullanicilar:
@@ -129,29 +134,44 @@ def oneri_al(kullanici):
     for kişi in tum_kullanicilar:
         db.execute("SELECT * FROM puanlar WHERE kisi='{0}'".format(kişi))
         baskalarinin_verileri.append(db.fetchall())
+    benzer_kisi = ""
     benzer_kisiler = []
-    for benim_bir_verim in benim_verilerim:
-        for kisilerin_verileri in baskalarinin_verileri:
-            for bir_kisi_verileri in kisilerin_verileri:
-                    if bir_kisi_verileri[1] == benim_bir_verim[1]:
-                         if abs(int(bir_kisi_verileri[2]) - int(benim_bir_verim[2])) <= 3:
-                             if bir_kisi_verileri[0] not in benzer_kisiler:
-                                 benzer_kisiler.append(bir_kisi_verileri[0])
+    for kisilerin_verileri in baskalarinin_verileri:
+        kac_benzer = 0
+        kac_puan_yakin = 0
+        for bir_kisi_verileri in kisilerin_verileri:
+            for benim_bir_verim in benim_verilerim:
+                if bir_kisi_verileri[1] == benim_bir_verim[1]:
+                    kac_benzer += 1
+                    if abs(int(bir_kisi_verileri[2]) - int(benim_bir_verim[2])) <= 3:
+                        kac_puan_yakin += 1
+                        if bir_kisi_verileri[0] not in benzer_kisiler:
+                            benzer_kisi = bir_kisi_verileri[0]
+        if (kac_puan_yakin/kac_benzer) > (3/4):
+            benzer_kisiler.append(benzer_kisi)
     oneri_yerler = []
     for bir_kisi_verileri in kisilerin_verileri:
-        if int(bir_kisi_verileri[2]) > 5:
-            if bir_kisi_verileri[1] not in oneri_yerler:
-                oneri_yerler.append([bir_kisi_verileri[1], bir_kisi_verileri[2]])
+        if bir_kisi_verileri[0] in benzer_kisiler:
+            if int(bir_kisi_verileri[2]) > 5:
+                if bir_kisi_verileri[1] not in oneri_yerler:
+                    oneri_yerler.append([bir_kisi_verileri[1], bir_kisi_verileri[2]])
     puana_gore_oneriler = []
+    benim_yerlerim = []
+    for bir_verim in benim_verilerim:
+        if bir_verim[1] not in benim_yerlerim:
+            benim_yerlerim.append(bir_verim[1])
     for yer_puan in oneri_yerler:
         if int(yer_puan[1]) > 5:
-            if yer_puan[1] not in puana_gore_oneriler:
+            if (yer_puan[1] not in puana_gore_oneriler) and (yer_puan[0] not in benim_yerlerim):
                 puana_gore_oneriler.append(yer_puan[0])
     close_connect(vt)
     clear_screan()
-    print("Sizin için önerilerim: ")
-    for bir_yer in puana_gore_oneriler:
-        print("- "+bir_yer)
+    if puana_gore_oneriler == []:
+        print("Size özel bir öneri bulunamadı !")
+    else:
+        print("Sizin için önerilerim: ")
+        for bir_yer in puana_gore_oneriler:
+            print("- "+bir_yer)
 
     inpt = input("\nMenüye Dönmek İçin: Enter")
 
@@ -201,13 +221,16 @@ def main():
         create_table("kullanicilar", "kullaniciAdi")
         clear_screan()
         print("Yemek Yeri Öneri Programı - Arda Mavi\n")
-        print("1. Kullanıcı Girişi\n2. Yeni Kullanıcı\nRastgele -> Çıkış")
-        inpt = input("\nSecim: ")
-        clear_screan()
-        if inpt == "1":
-            kullanici_giris()
-        elif inpt == "2":
-            yeni_kullanici()
+        while True:
+            print("1. Kullanıcı Girişi\n2. Yeni Kullanıcı\nRastgele -> Çıkış")
+            inpt = input("\nSecim: ")
+            clear_screan()
+            if inpt == "1":
+                kullanici_giris()
+            elif inpt == "2":
+                yeni_kullanici()
+            else:
+                break
         print("Çıkış Yapıldı !\nArda Mavi - ardamavi.com")
 
 if __name__ == "__main__":
