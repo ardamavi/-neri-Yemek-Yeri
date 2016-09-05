@@ -63,8 +63,8 @@ def puani_guncellencek_mi(kullanici, yer, puan):
     db.execute("SELECT yer FROM puanlar WHERE kisi='{0}'".format(kullanici))
     kisinin_yerleri = db.fetchall()
     kisinin_yerleri_list = []
-    for bir_yer in kisinin_yerleri:
-        kisinin_yerleri_list.append(bir_yer[0])
+    for bir_kullanici in kisinin_yerleri:
+        kisinin_yerleri_list.append(bir_kullanici[0])
     if yer in kisinin_yerleri_list:
         db.execute("UPDATE puanlar SET puan='{0}' WHERE kisi='{1}' and yer='{2}'".format(puan, kullanici, yer))
         close_connect(vt)
@@ -72,23 +72,23 @@ def puani_guncellencek_mi(kullanici, yer, puan):
     close_connect(vt)
     return False
 
-def puanla(kullanici, db_yerler_list):
-    tmp_db_yerler = []
-    for bir_yer in db_yerler_list:
-        if bir_yer not in tmp_db_yerler:
-            tmp_db_yerler.append(bir_yer)
-    db_yerler_list = deepcopy(tmp_db_yerler)
+def puanla(kullanici, tum_kullanicilar):
+    tmp_kullanicilar = []
+    for bir_kullanici in tum_kullanicilar:
+        if bir_kullanici not in tmp_kullanicilar:
+            tmp_kullanicilar.append(bir_kullanici)
+    tum_kullanicilar = deepcopy(tmp_kullanicilar)
 
-    if db_yerler_list != []:
+    if tum_kullanicilar != []:
         print("Yerler: ")
-        for bir_yer in db_yerler_list:
-            print("- "+bir_yer)
+        for bir_kullanici in tum_kullanicilar:
+            print("- "+bir_kullanici)
         print("Çıkış: 0")
     yer = input("Puanlama Yapacağınız Yer: ")
     if yer == "0":
         print("Puanlama menüsünden çıkış yapıldı.")
         return "cik"
-    if yer not in db_yerler_list:
+    if yer not in tum_kullanicilar:
         print("Bu yer ile ilgili ilk puanı siz ekleyin !")
     puan = ""
     hata_mesaji = "Hatalı Giriş !\nLütfen 0 ile 10 arasında bir sayı giriniz."
@@ -110,34 +110,74 @@ def puanla(kullanici, db_yerler_list):
 def yerler_dondur():
     create_table("puanlar", "kisi, yer, puan")
     db_yerler = verileri_al("puanlar", "yer")
-    db_yerler_list = []
-    for bir_yer in db_yerler:
-        db_yerler_list.append(bir_yer[0])
-    return db_yerler_list
+    tum_kullanicilar = []
+    for bir_kullanici in db_yerler:
+        tum_kullanicilar.append(bir_kullanici[0])
+    return tum_kullanicilar
 
-def oneri_al():
-    inpt = input("Yapım Aşamasında !")
+def oneri_al(kullanici):
+    vt, db = set_connect_and_cursor()
+    tum_kullanicilar = verileri_al("kullanicilar", "*")
+    tmp_kullanicilar = []
+    for bir_kullanici in tum_kullanicilar:
+            tmp_kullanicilar.append(bir_kullanici[0])
+    tum_kullanicilar = deepcopy(tmp_kullanicilar)
+    tum_kullanicilar.remove(kullanici)
+    db.execute("SELECT * FROM puanlar WHERE kisi='{0}'".format(kullanici))
+    benim_verilerim = db.fetchall()
+    baskalarinin_verileri = []
+    for kişi in tum_kullanicilar:
+        db.execute("SELECT * FROM puanlar WHERE kisi='{0}'".format(kişi))
+        baskalarinin_verileri.append(db.fetchall())
+    benzer_kisiler = []
+    for benim_bir_verim in benim_verilerim:
+        for kisilerin_verileri in baskalarinin_verileri:
+            for bir_kisi_verileri in kisilerin_verileri:
+                    if bir_kisi_verileri[1] == benim_bir_verim[1]:
+                         if abs(int(bir_kisi_verileri[2]) - int(benim_bir_verim[2])) <= 3:
+                             if bir_kisi_verileri[0] not in benzer_kisiler:
+                                 benzer_kisiler.append(bir_kisi_verileri[0])
+    oneri_yerler = []
+    for bir_kisi_verileri in kisilerin_verileri:
+        if int(bir_kisi_verileri[2]) > 5:
+            if bir_kisi_verileri[1] not in oneri_yerler:
+                oneri_yerler.append([bir_kisi_verileri[1], bir_kisi_verileri[2]])
+    puana_gore_oneriler = []
+    for yer_puan in oneri_yerler:
+        if int(yer_puan[1]) > 5:
+            if yer_puan[1] not in puana_gore_oneriler:
+                puana_gore_oneriler.append(yer_puan[0])
+    close_connect(vt)
+    clear_screan()
+    print("Sizin için önerilerim: ")
+    for bir_yer in puana_gore_oneriler:
+        print("- "+bir_yer)
+
+    inpt = input("\nMenüye Dönmek İçin: Enter")
 
 def giris_yapildi(kullanici):
     clear_screan()
 
-    print("Giriş Yapıldı !\nHoş Geldiniz "+kullanici)
+    print("Giriş Yapıldı !\nHoş Geldiniz "+kullanici+"\n")
     while True:
-        print("\n1. Önerileri Al\n2. Puanla\nRastgele -> Çıkış")
-        inpt = input("Secim: ")
+        print("1. Önerileri Al\n2. Puanla\nRastgele -> Çıkış")
+        inpt = input("\nSecim: ")
         if inpt == "1":
             if yerler_dondur() == []:
+                clear_screan()
                 print("Database boş !\nÖneri alamazsınız.")
             else:
-                oneri_al()
+                clear_screan()
+                oneri_al(kullanici)
         elif inpt == "2":
             cikis_yapilsin_mi = "cikma"
             clear_screan()
             while cikis_yapilsin_mi == "cikma":
                 cikis_yapilsin_mi = puanla(kullanici, yerler_dondur())
+            clear_screan()
         else:
+            clear_screan()
             break
-        clear_screan()
 
 def kullanici_giris():
     tum_kullanicilar = verileri_al("kullanicilar", "*")
@@ -157,19 +197,17 @@ def kullanici_giris():
     print("Hatalı Giriş !\nBöyle Bir Kullanıcı Bulunmamakta\n")
     kullanici_giris()
 
-def menu():
-    clear_screan()
-    print("1. Kullanıcı Girişi\n2. Yeni Kullanıcı\nRastgele -> Çıkış")
-    inpt = input("Secim: ")
-    clear_screan()
-    if inpt == "1":
-        kullanici_giris()
-    elif inpt == "2":
-        yeni_kullanici()
-
 def main():
         create_table("kullanicilar", "kullaniciAdi")
-        menu()
+        clear_screan()
+        print("Yemek Yeri Öneri Programı - Arda Mavi\n")
+        print("1. Kullanıcı Girişi\n2. Yeni Kullanıcı\nRastgele -> Çıkış")
+        inpt = input("\nSecim: ")
+        clear_screan()
+        if inpt == "1":
+            kullanici_giris()
+        elif inpt == "2":
+            yeni_kullanici()
         print("Çıkış Yapıldı !\nArda Mavi - ardamavi.com")
 
 if __name__ == "__main__":
